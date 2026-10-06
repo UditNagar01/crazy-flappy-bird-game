@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#87ceeb">
+<title>Flappy Bird</title>
+<style>
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#87ceeb;font-family:Arial,sans-serif;touch-action:none}
+  body{display:grid;place-items:center}
+  canvas{display:block;width:min(100vw,800px);height:auto;max-height:100vh;aspect-ratio:4/3;image-rendering:auto;touch-action:none}
+</style>
+</head>
+<body>
+<canvas id="game" width="800" height="600" aria-label="Flappy Bird game"></canvas>
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W=800,H=600,FPS=60;
+  const SKY='#87CEEB', GREEN='#4CAF50', DARK_GREEN='#2E7D32', YELLOW='#FFDD46', WHITE='#fff', GROUND='#DEB887';
+  const BIRD_X=180,BIRD_SIZE=28,GRAVITY=.32,FLAP=-7.5;
+  const PIPE_W=75,GAP=200,SPEED=3.5,INTERVAL=1500,GROUND_H=70;
+  let state='start', bird, pipes=[], score=0, lastPipe=0, lastFrame=performance.now();
+  function reset(){bird={x:BIRD_X,y:H/2,v:0};pipes=[];score=0;lastPipe=performance.now()}
+  function start(){reset();state='playing';bird.v=FLAP}
+  function over(){state='gameover'}
+  function flap(){ if(state==='start'||state==='gameover') start(); else if(state==='playing') bird.v=FLAP }
+  function pipe(){
+    const min=90,max=H-GROUND_H-GAP-60;
+    pipes.push({x:W+20,gapY:Math.floor(min+Math.random()*(max-min+1)),passed:false});
+  }
+  function rectHit(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
+  function update(dt){
+    if(state!=='playing')return;
+    const f=dt*FPS;
+    bird.v+=GRAVITY*f; bird.y+=bird.v*f;
+    const now=performance.now();
+    if(now-lastPipe>=INTERVAL){pipe();lastPipe=now}
+    for(const p of pipes){
+      p.x-=SPEED*f;
+      if(!p.passed&&p.x+PIPE_W<bird.x){p.passed=true;score++}
+    }
+    pipes=pipes.filter(p=>p.x+PIPE_W>=0);
+    const br={x:bird.x,y:bird.y,w:BIRD_SIZE,h:BIRD_SIZE};
+    if(br.y<=0||br.y+BIRD_SIZE>=H-GROUND_H){over();return}
+    for(const p of pipes){
+      const top={x:p.x,y:0,w:PIPE_W,h:p.gapY};
+      const bottomY=p.gapY+GAP;
+      const bottom={x:p.x,y:bottomY,w:PIPE_W,h:H-GROUND_H-bottomY};
+      if(rectHit(br,top)||rectHit(br,bottom)){over();return}
+    }
+  }
+  function text(t,size,y){ctx.font=`bold ${size}px Arial`;ctx.fillStyle=WHITE;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,W/2,y)}
+  function draw(){
+    ctx.fillStyle=SKY;ctx.fillRect(0,0,W,H);
+    for(const [x,y] of [[120,90],[520,130],[700,70]]){ctx.fillStyle=WHITE;ctx.beginPath();ctx.arc(x,y,22,0,Math.PI*2);ctx.arc(x+25,y+5,18,0,Math.PI*2);ctx.arc(x-22,y+8,16,0,Math.PI*2);ctx.fill()}
+    for(const p of pipes){
+      ctx.fillStyle=GREEN;ctx.fillRect(p.x,0,PIPE_W,p.gapY);ctx.fillRect(p.x,p.gapY+GAP,PIPE_W,H-GROUND_H-(p.gapY+GAP));
+      ctx.strokeStyle=DARK_GREEN;ctx.lineWidth=4;ctx.strokeRect(p.x+2,2,PIPE_W-4,p.gapY-2);ctx.strokeRect(p.x+2,p.gapY+GAP+2,PIPE_W-4,H-GROUND_H-(p.gapY+GAP)-4)
+    }
+    ctx.fillStyle=GROUND;ctx.fillRect(0,H-GROUND_H,W,GROUND_H);
+    ctx.fillStyle=YELLOW;ctx.beginPath();ctx.arc(bird.x+BIRD_SIZE/2,bird.y+BIRD_SIZE/2,BIRD_SIZE/2,0,Math.PI*2);ctx.fill();
+    if(state==='start'){text('FLAPPY BIRD',64,190);text('Tap / click / SPACE to start',36,270);text('Avoid the pipes and survive!',28,315)}
+    if(state==='playing'){text(String(score),52,55)}
+    if(state==='gameover'){ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(0,0,W,H);text('GAME OVER',64,200);text(`Score: ${score}`,36,270);text('Tap / click / SPACE to restart',28,320)}
+  }
+  function frame(now){const dt=Math.min((now-lastFrame)/1000,.05);lastFrame=now;update(dt);draw();requestAnimationFrame(frame)}
+  function key(e){if(e.code==='Space'||e.code==='ArrowUp'){e.preventDefault();flap()}if(e.code==='KeyR'&&state==='gameover')start()}
+  window.addEventListener('keydown',key,{passive:false});
+  canvas.addEventListener('pointerdown',e=>{e.preventDefault();flap()},{passive:false});
+  reset();requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

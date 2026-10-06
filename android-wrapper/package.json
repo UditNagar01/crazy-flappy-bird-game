@@ -13,6 +13,7 @@
     "@capacitor/android": "latest"
   },
   "devDependencies": {
-    "@capacitor/cli": "latest"
+    "@capacitor/cli": "latest",
+    "typescript": "latest"
   }
 }
